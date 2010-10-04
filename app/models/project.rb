@@ -1,21 +1,12 @@
-class Project < LimsActiveRecord
+class Project < ActiveResource::Base
+  self.site = ILIMS_SITE
 
-
-  belongs_to :user
-  has_many :assets
-  has_many :samples
-  has_many :data_files
-  has_many :project_pages 
-
-
-  ## find all projects for a given username
-
-  def self.getProjects(username)
-    u = User.find(:first, :conditions => "login = '#{username}'")
-
-    return Project.find(:all, :order_by => "user")
-
-
+  def items
+    
+    # GET /projects/1/items.xml
+    res = connection.get("#{self.class.prefix}#{self.class.collection_name}/#{self.id}/items")
+    
   end
-
+ 
+  
 end

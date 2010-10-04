@@ -69,7 +69,7 @@ Choose Input files
 <% @users.each do |u| %>
 <%= link_to_remote("#{u.login}",
 :loading => "load_div_image('inputs_div')", 
- :url => { :controller => "lims", :action => :list, :id => u.id },
+ :url => { :controller => "ilims", :action => :list, :id => u.id },
 :failure => "alert('HTTP Error ' + request.status + '!')", :update => u.login )%>
 
 <div id="<%= u.login %>">

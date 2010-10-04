@@ -238,10 +238,10 @@ class AnalysisController < ApplicationController
         @extract_dta.algorithm = 'extract_msn'
         @combion_filter = CombionFilter.new
         @sequest_search = SequestSearch.new
-	@analysis_setting = AnalysisSetting.new
-	@analysis_setting.xinteract_flags = '-Ol'
-	@analysis_setting.prophet_flags = 'DB_REFRESH MINPROB0.05 EXCLUDE_ZEROS'
-	@analysis_setting.ebp_flags = '-m0.05 --nohom -P0.01' 
+      	@analysis_setting = AnalysisSetting.new
+      	@analysis_setting.xinteract_flags = '-Ol'
+      	@analysis_setting.prophet_flags = 'DB_REFRESH MINPROB0.05 EXCLUDE_ZEROS'
+      	@analysis_setting.ebp_flags = '-m0.05 --nohom -P0.01' 
 
     end
 
@@ -317,8 +317,8 @@ class AnalysisController < ApplicationController
     @rawfiles = []
     #if this is a lims project, then we need to create our own raw directory.     @rawfiles = []
     if params[:LIMS] == '1'
-      @rawfiles = params[:rawfile]
-      @sequest_search.raw_dir = "LIMS_TRANSFER/#{session[:cas_user]}/#{Time.now.strftime("%Y%m%d%H%M%S")}"
+      
+      @sequest_search.raw_dir = ""
       
       if @rawfiles.nil? || @rawfiles.empty?
         @pipeline_analysis.destroy
@@ -403,34 +403,12 @@ class AnalysisController < ApplicationController
     if @sequest_search.save
       #if separate analysis is on, submit for only the first raw file. 
       @files = []
-      if params[:SeparateAnalyses]
-        #create the runscript
-        if @rawfiles.empty?
-          #will be deprecated soon this only hapens when not using lims.
-          @remps = IO.popen("#{SEQUEST_SSH_PREFIX} ls -1 #{SEQUEST_RESULTS}/#{@sequest_search.raw_dir}/*.raw #{SEQUEST_RESULTS}/#{@sequest_search.raw_dir}/*.RAW")
-          @fn = @remps.readlines
-          @fn.each do |name| 
-            
-            @files << name.chomp
-            
-          end
-          @remps.close
-          #puts @files.to_s
-          @job.runscript = ScriptGen.runscript(@job, "#{@files[0]}", nil)
-        else
-          #here we have to detrermine the sequest system file name for the first raw file once it gets transferred over. 
-          @temp_fname = @rawfiles[0].slice((@rawfiles[0].rindex('/')+1)...@rawfiles[0].length)
-          @pipeline_analysis.name = @original_name + " - #{@temp_fname} (main)"
-          @pipeline_analysis.save
-          @job.runscript = ScriptGen.runscript(@job, "#{SEQUEST_RESULTS}/#{@sequest_search.raw_dir}/#{@temp_fname}", @rawfiles)
-          
-        end
-      else  
-        if ! @rawfiles.empty?
-          @job.runscript = ScriptGen.runscript(@job, nil, @rawfiles) 
-        else
-          @job.runscript = ScriptGen.runscript(@job, nil, nil) 
-        end
+     
+      if ! @rawfiles.empty?
+        @job.runscript = ScriptGen.runscript(@job, nil, @rawfiles) 
+      else
+        @job.runscript = ScriptGen.runscript(@job, nil, nil) 
+      end
       end
 
       @job.save
@@ -490,92 +468,7 @@ class AnalysisController < ApplicationController
       redirect_to :controller => 'project', :action => 'list'
       
       #####
-      if params[:SeparateAnalyses] && @job.qsub_id > 0
-        
-        #here's where we submit the latter projects
-        #first we clone the pipeline analysis and the analysis setting
-        #note that we don't really need to do error checking because everything was already validated by this point. 
-        #but if the lims data is trasferred, we don't have any file list, so we need to build one. 
-
-        if ! @rawfiles.empty?
-          @files = []
-          for j in 0...@rawfiles.size
-            @temp_fname2 = @rawfiles[j].slice((@rawfiles[j].rindex('/')+1)...@rawfiles[j].length)
-            @files << "#{SEQUEST_RESULTS}/#{@sequest_search.raw_dir}/#{@temp_fname2}"
-          end
-          
-        end
-
-
-        for i in 1...@files.size
-          @temp_analysis = @pipeline_analysis.clone
-          @temp_fname3 = @files[i].slice((@files[i].rindex('/')+1)...@files[i].length)
-          @temp_analysis.name = @original_name + " - #{@temp_fname3}"
-          @temp_analysis.pipeline_project = @pipeline_analysis.pipeline_project
-          @temp_analysis.save
-          @temp_analysis.setPath
-          @temp_analysis.save
-          @temp_job = @job.clone
-          @temp_job.pipeline_analysis = @temp_analysis
-          @temp_job.save
-          @temp_analysis_setting = @analysis_setting.clone
-          @temp_analysis_setting.job = @temp_job
-          @temp_analysis_setting.save
-          
-          #puts "Adding extra #{@files[i]}\n\n"
-          @temp_job.runscript = ScriptGen.runscript(@temp_job, "#{@files[i]}", nil)
-          @temp_job.save
-          #create the directory
-          File.umask(0000)
-          Dir.mkdir("#{QINTERACT_PROJECT_ROOT}/#{@temp_analysis.path}", 0777)
-          Dir.chdir("#{QINTERACT_PROJECT_ROOT}/#{@temp_analysis.path}") do
-            #write runscript
-            @temp_file = File.new("runPipeline.sh", "w+", 0775)
-            @temp_file.write(@temp_job.runscript)
-            @temp_file.close
-
-            @temp_job.qsub_cmd = "#{QSUB_PREFIX} #{QSUB_CONCUR}#{PBS_SERVER} -l nodes=1:ppn=2 -j oe -m be #{@mail_to} -W depend=afterany:#{@job.qsub_id}#{QSUB_JOB_SUFFIX} runPipeline.sh"
-            
-            
-            
-            @ps = IO.popen(@temp_job.qsub_cmd, "r+")
-            
-            #try to get qsub number and save it, 
-            #otherwise through an error and save 0
-            @out = @ps.gets        
-            if ! @out.nil? && @out.match(/^\d.*/)
-              @sa = @out.split('.')
-              @temp_job.qsub_id = @sa[0]
-              flash[:notice] = 'Your projects were successfully created.'
-            else
-              @temp_job.qsub_id = 0
-              flash[:notice] = 'Your project was successfully created but there may have been a problem submitting your job to the queue. Please contact your system administrator.'
-            end
-            
-            #now submit auditor:
-
-            file2 = File.new("auditJob.sh", "w+", 0775)
-            file2.write("cd #{PROJECT_ROOT}/#{@pipeline_analysis.path}\n\n")
-            file2.write("sleep 60\n\n")
-            file2.write("wget -O audit.log http://guacamole.itmat.upenn.edu/qInteractBypass/job/audit/#{@temp_job.id}\n\n")
-            # now we zip it up
-            analysis = @pipeline_analysis
-            file2.write("cd ..\n\n")
-            file2.write("tar --gzip -pcvf archive_#{analysis.id}.tgz #{analysis.owner}_#{analysis.id}/\n\n")
-            file2.write("mv archive_#{analysis.id}.tgz #{ARCHIVE_ROOT}\n\n")
-            file2.close
-            @ps2 = IO.popen("#{QSUB_PREFIX} #{QSUB_CONCUR}#{PBS_SERVER} -l nodes=1:ppn=2 -j oe -m be #{@mail_to} -W depend=afterany:#{@temp_job.qsub_id}#{QSUB_JOB_SUFFIX} auditJob.sh", "r+")
-            @ps2.close
-
-
-          end
-          @ps.close
-          @temp_job.save
-          
-        end
-        
-      end
-      
+   
       
       
     else
@@ -697,10 +590,7 @@ class AnalysisController < ApplicationController
     @rawfiles = []
     #if this is a lims project, then we need to create our own raw directory.     @rawfiles = []
     if params[:LIMS] == '1'
-      @rawfiles = params[:rawfile]
-      @mascot_search.raw_dir = "LIMS_TRANSFER/#{session[:cas_user]}/#{Time.now.strftime("%Y%m%d%H%M%S")}"
-
-
+      @mascot_search.raw_dir = ""
       if @rawfiles.empty?
         @pipeline_analysis.destroy
         flash[:notice] = "You have to select at least one raw file or pick a raw folder."
@@ -787,35 +677,12 @@ class AnalysisController < ApplicationController
     if @mascot_search.save
       #if separate analysis is on, submit for only the first raw file. 
       @files = []
-      if params[:SeparateAnalyses]
-        #create the runscript
-        if @rawfiles.empty?
-          @remps = IO.popen("#{SEQUEST_SSH_PREFIX} ls -1 #{SEQUEST_RESULTS}/#{@mascot_search.raw_dir}/*.raw #{SEQUEST_RESULTS}/#{@mascot_search.raw_dir}/*.RAW")
-          @fn = @remps.readlines
-          @fn.each do |name| 
-            
-            @files << name.chomp
-            
-          end
-          @remps.close
-          #puts @files.to_s
-          @job.runscript = ScriptGen.runscript(@job, "#{@files[0]}", nil)
-        else
-          #here we have to detrermine the mascot system file name for the first raw file once it gets transferred over. 
-          @temp_fname = @rawfiles[0].slice((@rawfiles[0].rindex('/')+1)...@rawfiles[0].length)
-          @pipeline_analysis.name = @original_name + " - #{@temp_fname} (main)"
-          @pipeline_analysis.save
-          @job.runscript = ScriptGen.runscript(@job, "#{SEQUEST_RESULTS}/#{@mascot_search.raw_dir}/#{@temp_fname}", @rawfiles)
-          
-        end
-      else  
-        if ! @rawfiles.empty?
-          @job.runscript = ScriptGen.runscript(@job, nil, @rawfiles) 
-        else
-          @job.runscript = ScriptGen.runscript(@job, nil, nil) 
-        end
+      if ! @rawfiles.empty?
+        @job.runscript = ScriptGen.runscript(@job, nil, @rawfiles) 
+      else
+        @job.runscript = ScriptGen.runscript(@job, nil, nil) 
       end
-
+  
       @job.save
       #create the directory
       File.umask(0000)
@@ -873,93 +740,6 @@ class AnalysisController < ApplicationController
       redirect_to :controller => 'project', :action => 'list'
       
       #####
-      
-      if params[:SeparateAnalyses] && @job.qsub_id > 0
-        
-        #here's where we submit the latter projects
-        #first we clone the pipeline analysis and the analysis setting
-        #note that we don't really need to do error checking because everything was already validated by this point. 
-        #but if the lims data is trasferred, we don't have any file list, so we need to build one. 
-
-        if ! @rawfiles.empty?
-          @files = []
-          for j in 0...@rawfiles.size
-            @temp_fname2 = @rawfiles[j].slice((@rawfiles[j].rindex('/')+1)...@rawfiles[j].length)
-            @files << "#{SEQUEST_RESULTS}/#{@mascot_search.raw_dir}/#{@temp_fname2}"
-          end
-          
-        end
-
-
-        for i in 1...@files.size
-          @temp_analysis = @pipeline_analysis.clone
-          @temp_fname3 = @files[i].slice((@files[i].rindex('/')+1)...@files[i].length)
-          @temp_analysis.name = @original_name + " - #{@temp_fname3}"
-          @temp_analysis.pipeline_project = @pipeline_analysis.pipeline_project
-          @temp_analysis.save
-          @temp_analysis.setPath
-          @temp_analysis.save
-          @temp_job = @job.clone
-          @temp_job.pipeline_analysis = @temp_analysis
-          @temp_job.save
-          @temp_analysis_setting = @analysis_setting.clone
-          @temp_analysis_setting.job = @temp_job
-          @temp_analysis_setting.save
-          
-          #puts "Adding extra #{@files[i]}\n\n"
-          @temp_job.runscript = ScriptGen.runscript(@temp_job, "#{@files[i]}", nil)
-          @temp_job.save
-          #create the directory
-          File.umask(0000)
-          Dir.mkdir("#{QINTERACT_PROJECT_ROOT}/#{@temp_analysis.path}", 0777)
-          Dir.chdir("#{QINTERACT_PROJECT_ROOT}/#{@temp_analysis.path}") do
-            #write runscript
-            @temp_file = File.new("runPipeline.sh", "w+", 0775)
-            @temp_file.write(@temp_job.runscript)
-            @temp_file.close
-
-            @temp_job.qsub_cmd = "#{QSUB_PREFIX} #{QSUB_CONCUR}#{PBS_SERVER} -l nodes=1:ppn=2 -j oe -m be #{@mail_to} -W depend=afterany:#{@job.qsub_id}#{QSUB_JOB_SUFFIX} runPipeline.sh"
-            
-                       
-            @ps = IO.popen(@temp_job.qsub_cmd, "r+")
-            
-            #try to get qsub number and save it, 
-            #otherwise through an error and save 0
-            @out = @ps.gets        
-            if ! @out.nil? && @out.match(/^\d.*/)
-              @sa = @out.split('.')
-              @temp_job.qsub_id = @sa[0]
-              flash[:notice] = 'Your projects were successfully created.'
-            else
-              @temp_job.qsub_id = 0
-              flash[:notice] = 'Your project was successfully created but there may have been a problem submitting your job to the queue. Please contact your system administrator.'
-            end
-            
-            #now submit auditor:
-
-            file2 = File.new("auditJob.sh", "w+", 0775)
-            file2.write("cd #{PROJECT_ROOT}/#{@pipeline_analysis.path}\n\n")
-            file2.write("wget -O audit.log http://guacamole.itmat.upenn.edu/qInteractBypass/job/audit/#{@temp_job.id}\n\n")
-            # now we zip it up
-            analysis = @pipeline_analysis
-            file2.write("cd ..\n\n")
-            file2.write("tar --gzip -pcvf archive_#{analysis.id}.tgz #{analysis.owner}_#{analysis.id}/\n\n")
-            file2.write("mv archive_#{analysis.id}.tgz #{ARCHIVE_ROOT}\n\n")
-            file2.close
-            @ps2 = IO.popen("#{QSUB_PREFIX} #{QSUB_CONCUR}#{PBS_SERVER} -l nodes=1:ppn=2 -j oe -m be #{@mail_to} -W depend=afterany:#{@temp_job.qsub_id}#{QSUB_JOB_SUFFIX} auditJob.sh", "r+")
-            @ps2.close
-            
-
- 
-          end
-          @ps.close
-          @temp_job.save
-          
-        end
-        
-      end
-      
-      
       
     else
       

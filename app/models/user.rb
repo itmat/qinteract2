@@ -1,7 +1,51 @@
-class User < LimsActiveRecord
-  has_many :data_files
-  has_many :projects
-  has_many :memberships
-  has_many :groups, :through => :memberships
-  # has_and_belongs_to_many :groups
+class User < ActiveResource::Base
+  self.site = ILIMS_SITE
+
+  def items
+    
+    # GET /users/1/items.xml
+    res = connection.get("#{self.class.prefix}#{self.class.collection_name}/#{self.id}/items")
+    
+  end
+  
+  def projects
+    
+    # GET /users/1/projects.xml
+    res = connection.get("#{self.class.prefix}#{self.class.collection_name}/#{self.id}/projects")
+    
+  end
+
+  def find_item_by_name(name)
+    
+    ia = items.select{|a| a['attachment_file_name'] == name }
+    unless ia.nil? || ia.empty?
+      i = Item.find(ia[0]['id'].to_s)
+      return i
+    end
+    
+  end
+
+
+  def build_items_list
+    
+    @items_list = Array.new
+    
+    #lets build the options hash for items
+    
+    projects.each do |p|
+    
+      project = Project.find(p['id'])
+    
+      project.items.each do |i|
+        
+        
+        @items_list << ["#{p['name']} --> #{i['attachment_file_name']}","#{i['id']}"]
+        
+      end
+    end
+    
+    @items_list
+    
+  end
+  
 end

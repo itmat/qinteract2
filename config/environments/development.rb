@@ -16,3 +16,6 @@ config.action_view.cache_template_extensions         = false
 
 # Don't care if the mailer can't send
 config.action_mailer.raise_delivery_errors = false
+
+#active resource lims site
+ILIMS_SITE = 'http://admin:admin@localhost:3002'
