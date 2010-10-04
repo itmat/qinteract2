@@ -4,15 +4,15 @@ class AnalysisController < ApplicationController
   require "yaml"
   require 'net/http'
   require 'json'
-
+  
   def files
     # returns a list of file paths and their file sizes as json
     
     @analysis = PipelineAnalysis.find(params[:id])
     render :text => @analysis.file_hash.to_json
-
+    
   end
-
+  
   def index
     list
     render :action => 'list'
@@ -25,16 +25,16 @@ class AnalysisController < ApplicationController
     @datlist = IO.readlines("#{QINTERACT_PROJECT_ROOT}/#{@analysis.path}/datlist.txt") if File.exist?("#{QINTERACT_PROJECT_ROOT}/#{@analysis.path}/datlist.txt")
     
   end
-
+  
   def add_params
-      render(:layout => false)
-
+    render(:layout => false)
+    
   end   
-
+  
   def list_pi
     comet_server = "guacamole.itmat.upenn.edu"
     comet_uri = "/tpp/cgi-bin/comet-fastadb.cgi"
-
+    
     @analysis = PipelineAnalysis.find(params[:id])
     @pilist = []
     #for each accession, get pi info via http request. then print out gi and pi numbers
@@ -48,38 +48,38 @@ class AnalysisController < ApplicationController
         gi = "#{$1}"
          # @pilist << "#{gi}"
         response = Net::HTTP.get_response(comet_server, "#{comet_uri}?Ref=#{gi}&Db=#{DB_ROOT}/#{@analysis.jobs[0].analysis_setting.prot_db}")
-         
-
-       response.body.scan(%r{AVG.*pI: (\S+)}m) do |pi|
-
+        
+        
+        response.body.scan(%r{AVG.*pI: (\S+)}m) do |pi|
+          
           @pilist << "#{gi}     #{pi}"
-
+          
         end
         
       end
        
-
-
-
+      
+      
+      
     end
-
+    
     
     render(:layout => false)
-
-
-
+    
+    
+    
   end
-
+  
   
   def create_params
-      @xflags = params[:xinteractoptions] ||= ''
-      @pflags = params[:prophetoptions] ||= ''
-      @eflags = params[:ebpoptions] ||= ''
-
-      render(:layout => false)
-
+    @xflags = params[:xinteractoptions] ||= ''
+    @pflags = params[:prophetoptions] ||= ''
+    @eflags = params[:ebpoptions] ||= ''
+    
+    render(:layout => false)
+    
   end   
-
+  
   def count_peptides
     @analysis = PipelineAnalysis.find(params[:id])
     @peptidehash = []
@@ -92,9 +92,9 @@ class AnalysisController < ApplicationController
     @summary_counts = YAML::load(File.open(fn+".sidx"))
     
     render(:layout => false)
-
+    
   end
-
+  
   def list
     #takes an id param. lists all analyses for a given pipeline_project
     @analyses = PipelineProject.find(params[:id]).pipeline_analyses
@@ -201,171 +201,171 @@ class AnalysisController < ApplicationController
  end
 
 
-  #need new sequest and new mascot
-  #need separate create for sequest and mascot
-
-  def new_sequest
-
-    @dataset_type = 'Sequest'
-    @pipeline_project = PipelineProject.find(params[:id])
-    @import_job = Job.findByPBS(params[:qsubid].to_i) if ! params[:qsubid].nil?
-    @users = User.find(:all, :order => "login")    
-    @pipeline_analysis = PipelineAnalysis.new
-    @pipeline_analysis.pipeline_project = @pipeline_project
-    @pipeline_analysis.pipeline_project_id = @pipeline_project.id
-    @pipeline_analysis.owner = @pipeline_project.owner
-
-    @job = Job.new
-    if ! @import_job.nil?
-      @qsubid = params[:qsubid]
-      @job.notify_email = @import_job.notify_email
-      if ! @import_job.sequest_search.nil? then
-        @sequest_search = @import_job.sequest_search.clone
-        @sequest_search.raw_dir = nil
-        
-      end
-      if ! @import_job.combion_filter.nil? then
-        @combion_filter = @import_job.combion_filter.clone 
-        
-      end
-
-      @extract_dta = @import_job.extract_dta.clone if ! @import_job.extract_dta.nil?
-      @analysis_setting = @import_job.analysis_setting.clone if ! @import_job.analysis_setting.nil?
-
-    else
-
-        @extract_dta = ExtractDta.new()
-        @extract_dta.algorithm = 'extract_msn'
-        @combion_filter = CombionFilter.new
-        @sequest_search = SequestSearch.new
-      	@analysis_setting = AnalysisSetting.new
-      	@analysis_setting.xinteract_flags = '-Ol'
-      	@analysis_setting.prophet_flags = 'DB_REFRESH MINPROB0.05 EXCLUDE_ZEROS'
-      	@analysis_setting.ebp_flags = '-m0.05 --nohom -P0.01' 
-
-    end
-
-    @protdb = ProteinDb.getHash
-    @sequest_params = SequestParam.find(:all, :order=> "filename")
-    @extract_params = ExtractParam.find(:all, :order=> "filename")
-    @cur_dir = RawDir.new
-    @cur_dir.createInstance('')
-    @raw_dirs = RawDir.getRawDirs('')
-    
-  end
-  
-  def create_sequest
-    
-    # here is workaround so that validation will work. uses default settings
-    
-    # @pipeline_project = PipelineProject.find(params[:id])
-    @dataset_type = 'Sequest'
-    @users = User.find(:all, :order => "login")
-    @pipeline_analysis = PipelineAnalysis.new
-    @pipeline_analysis.pipeline_project = @pipeline_project
-    @job = Job.new
-    @combion_filter = CombionFilter.new
-    @extract_dta = ExtractDta.new
-    @extract_dta.algorithm = 'decon'
-    @sequest_search = SequestSearch.new
-    @analysis_setting = AnalysisSetting.new
-    @analysis_setting.xinteract_flags = '-Ol'
-    @analysis_setting.prophet_flags = 'DB_REFRESH MINPROB0.05 EXCLUDE_ZEROS'
-    @analysis_setting.ebp_flags = '-m0.05 --nohom -P0.01' 
-    @protdb = ProteinDb.getHash
-    @sequest_params = SequestParam.find(:all, :order=> "filename")
-    @extract_params = ExtractParam.find(:all, :order=> "filename")
-    @cur_dir = RawDir.new
-    @cur_dir.createInstance('')
-    @raw_dirs = RawDir.getRawDirs('')
-    
+ #need new sequest and new mascot
+ #need separate create for sequest and mascot
+ 
+ def new_sequest
+   
+   @dataset_type = 'Sequest'
+   @pipeline_project = PipelineProject.find(params[:id])
+   @import_job = Job.findByPBS(params[:qsubid].to_i) if ! params[:qsubid].nil?
+   @users = User.find(:all, :order => "login")    
+   @pipeline_analysis = PipelineAnalysis.new
+   @pipeline_analysis.pipeline_project = @pipeline_project
+   @pipeline_analysis.pipeline_project_id = @pipeline_project.id
+   @pipeline_analysis.owner = @pipeline_project.owner
+   
+   @job = Job.new
+   if ! @import_job.nil?
+     @qsubid = params[:qsubid]
+     @job.notify_email = @import_job.notify_email
+     if ! @import_job.sequest_search.nil? then
+       @sequest_search = @import_job.sequest_search.clone
+       @sequest_search.raw_dir = nil
+       
+     end
+     if ! @import_job.combion_filter.nil? then
+       @combion_filter = @import_job.combion_filter.clone 
+       
+     end
      
-    ##################
-    
-    #here we have to adjust this method so that extract_dta, combion_filter, sequest_search, analysis_setting are all created independently and then attached to jobs. 
-
-
-    @pipeline_analysis = PipelineAnalysis.new(params[:pipeline_analysis])
-    @pipeline_project_id = @pipeline_analysis.pipeline_project_id
-
-    ##
-    @pipeline_project = PipelineProject.find(@pipeline_project_id)
-    ##
-
-    @job = Job.new(params[:job])
-    @job.qsub_id = 0
-    @job.qsub_cmd = 'qsub dummy command'
-    @job.runscript = 'echo placeholder'
-    
-    
-    if params[:AnalysisOn]
-      @analysis_setting = AnalysisSetting.new(params[:analysis_setting])
+     @extract_dta = @import_job.extract_dta.clone if ! @import_job.extract_dta.nil?
+     @analysis_setting = @import_job.analysis_setting.clone if ! @import_job.analysis_setting.nil?
+     
+   else
+     
+     @extract_dta = ExtractDta.new()
+     @extract_dta.algorithm = 'extract_msn'
+     @combion_filter = CombionFilter.new
+     @sequest_search = SequestSearch.new
+     @analysis_setting = AnalysisSetting.new
+     @analysis_setting.xinteract_flags = '-Ol'
+     @analysis_setting.prophet_flags = 'DB_REFRESH MINPROB0.05 EXCLUDE_ZEROS'
+     @analysis_setting.ebp_flags = '-m0.05 --nohom -P0.01' 
+     
+   end
+   
+   @protdb = ProteinDb.getHash
+   @sequest_params = SequestParam.find(:all, :order=> "filename")
+   @extract_params = ExtractParam.find(:all, :order=> "filename")
+   @cur_dir = RawDir.new
+   @cur_dir.createInstance('')
+   @raw_dirs = RawDir.getRawDirs('')
+   
+  end
+ 
+ def create_sequest
+   
+   # here is workaround so that validation will work. uses default settings
+   
+   # @pipeline_project = PipelineProject.find(params[:id])
+   @dataset_type = 'Sequest'
+   @users = User.find(:all, :order => "login")
+   @pipeline_analysis = PipelineAnalysis.new
+   @pipeline_analysis.pipeline_project = @pipeline_project
+   @job = Job.new
+   @combion_filter = CombionFilter.new
+   @extract_dta = ExtractDta.new
+   @extract_dta.algorithm = 'decon'
+   @sequest_search = SequestSearch.new
+   @analysis_setting = AnalysisSetting.new
+   @analysis_setting.xinteract_flags = '-Ol'
+   @analysis_setting.prophet_flags = 'DB_REFRESH MINPROB0.05 EXCLUDE_ZEROS'
+   @analysis_setting.ebp_flags = '-m0.05 --nohom -P0.01' 
+   @protdb = ProteinDb.getHash
+   @sequest_params = SequestParam.find(:all, :order=> "filename")
+   @extract_params = ExtractParam.find(:all, :order=> "filename")
+   @cur_dir = RawDir.new
+   @cur_dir.createInstance('')
+   @raw_dirs = RawDir.getRawDirs('')
+   
+   
+   ##################
+   
+   #here we have to adjust this method so that extract_dta, combion_filter, sequest_search, analysis_setting are all created independently and then attached to jobs. 
+   
+   
+   @pipeline_analysis = PipelineAnalysis.new(params[:pipeline_analysis])
+   @pipeline_project_id = @pipeline_analysis.pipeline_project_id
+   
+   ##
+   @pipeline_project = PipelineProject.find(@pipeline_project_id)
+   ##
+   
+   @job = Job.new(params[:job])
+   @job.qsub_id = 0
+   @job.qsub_cmd = 'qsub dummy command'
+   @job.runscript = 'echo placeholder'
+   
+   
+   if params[:AnalysisOn]
+     @analysis_setting = AnalysisSetting.new(params[:analysis_setting])
+     
+   end
+   #need to determine here whether or not we should separate analyses
+   
+   
+   if ! @pipeline_analysis.save
+     render :action => 'new_sequest', :id => @pipeline_project_id and return
+   end
+   @pipeline_analysis.setPath
+   @pipeline_analysis.save
+   
+   
+   @sequest_search = SequestSearch.new(params[:sequest_search])
+   
+   @rawfiles = []
+   #if this is a lims project, then we need to create our own raw directory.     @rawfiles = []
+   if params[:LIMS] == '1'
+     
+     @sequest_search.raw_dir = "LIMS_TRANSFER/#{session[:cas_user]}/#{Time.now.strftime("%Y%m%d%H%M%S")}"
+     
+     if @rawfiles.nil? || @rawfiles.empty?
+       @pipeline_analysis.destroy
+       flash[:notice] = "You have to select at least one raw file or pick a raw folder!"
+       render :action => 'new_sequest', :id => @pipeline_project_id and return
+     end
+     
+   end
+   
+   #NOW WE ADD THE EXTRACT DTA OBJECT
+   
+   
+   @extract_dta = ExtractDta.new(params[:extract_dta])
+   @extract_dta.raw_dir = @sequest_search.raw_dir
+   if ! @extract_dta.save then
       
-    end
-    #need to determine here whether or not we should separate analyses
-    
-    
-    if ! @pipeline_analysis.save
-      render :action => 'new_sequest', :id => @pipeline_project_id and return
-    end
-    @pipeline_analysis.setPath
-    @pipeline_analysis.save
-    
-
-    @sequest_search = SequestSearch.new(params[:sequest_search])
-        
-    @rawfiles = []
-    #if this is a lims project, then we need to create our own raw directory.     @rawfiles = []
-    if params[:LIMS] == '1'
-      
-      @sequest_search.raw_dir = "LIMS_TRANSFER/#{session[:cas_user]}/#{Time.now.strftime("%Y%m%d%H%M%S")}"
-      
-      if @rawfiles.nil? || @rawfiles.empty?
-        @pipeline_analysis.destroy
-        flash[:notice] = "You have to select at least one raw file or pick a raw folder!"
-        render :action => 'new_sequest', :id => @pipeline_project_id and return
-      end
-      
-    end
-
-    #NOW WE ADD THE EXTRACT DTA OBJECT
-
-
-    @extract_dta = ExtractDta.new(params[:extract_dta])
-    @extract_dta.raw_dir = @sequest_search.raw_dir
-    if ! @extract_dta.save then
-      
-      render :action => 'new_sequest', :id => @pipeline_project_id and return
-    else
-      @job.extract_dta = @extract_dta
-    end
-
-
-
-
-    # NOW ADD COMBION_FILTER WHERE APPLICABLE
-    
-    if ! params[:CombionOn].nil? then
-      @combion_filter = CombionFilter.new(params[:combion_filter])
-      @combion_filter.raw_dir = @sequest_search.raw_dir
-      @combion_filter.combine = 'combine_and_delete'
-      if @combion_filter.scan_num == 1 then
-        @combion_filter.scan_tolerance = @combion_filter.num_tolerance
+     render :action => 'new_sequest', :id => @pipeline_project_id and return
+   else
+     @job.extract_dta = @extract_dta
+   end
+   
+   
+   
+   
+   # NOW ADD COMBION_FILTER WHERE APPLICABLE
+   
+   if ! params[:CombionOn].nil? then
+     @combion_filter = CombionFilter.new(params[:combion_filter])
+     @combion_filter.raw_dir = @sequest_search.raw_dir
+     @combion_filter.combine = 'combine_and_delete'
+     if @combion_filter.scan_num == 1 then
+       @combion_filter.scan_tolerance = @combion_filter.num_tolerance
+     else
+       @combion_filter.scan_tolerance = @combion_filter.percent_tolerance
+     end
+     
+     if ! @combion_filter.save then
+       
+       render :action => 'new_sequest', :id => @pipeline_project_id and return
       else
-        @combion_filter.scan_tolerance = @combion_filter.percent_tolerance
-      end
-
-      if ! @combion_filter.save then
-        
-        render :action => 'new_sequest', :id => @pipeline_project_id and return
-      else
-        @job.combion_filter = @combion_filter
-      end
-
+       @job.combion_filter = @combion_filter
+     end
+     
       @job.combion_filter = @combion_filter
-      
-    end
-
+     
+   end
+   
       
     if ! params[:MSClusterOn].nil? then
       @mscluster = Mscluster.new({:raw_dir => @sequest_search.raw_dir})
@@ -395,94 +395,93 @@ class AnalysisController < ApplicationController
       end
       
     end
-    
-    @sequest_search.job = @job 
-    
-    if @sequest_search.save
-      #if separate analysis is on, submit for only the first raw file. 
-      @files = []
-     
-      if ! @rawfiles.empty?
-        @job.runscript = ScriptGen.runscript(@job, nil, @rawfiles) 
-      else
-        @job.runscript = ScriptGen.runscript(@job, nil, nil) 
-      end
-      end
-
-      @job.save
-      #create the directory
-      File.umask(0000)
-      Dir.mkdir("#{QINTERACT_PROJECT_ROOT}/#{@pipeline_analysis.path}", 0777)
-      Dir.chdir("#{QINTERACT_PROJECT_ROOT}/#{@pipeline_analysis.path}") do
-        #write runscript
-        @file = File.new("runPipeline.sh", "w+", 0775)
-        @file.write(@job.runscript)
-        @file.close
-        #submit runscript
-        @mail_to = ''
-        @mail_to = "-M #{@job.notify_email}" unless @job.notify_email.index('@').nil?
-        if params[:SeparateAnalyses]
-          @job.qsub_cmd = "#{QSUB_PREFIX} #{QSUB_BATCH}#{PBS_SERVER} -l nodes=1:ppn=2:seq -j oe -m be #{@mail_to} runPipeline.sh"  
-        else
-          @job.qsub_cmd = "#{QSUB_PREFIX} #{QSUB_BATCH}#{PBS_SERVER} -l nodes=1:ppn=2:seq -j oe -m be #{@mail_to} runPipeline.sh"  
-        end
-        #puts @job.qsub_cmd
-        @ps = IO.popen(@job.qsub_cmd, "r+")
-        
-        #try to get qsub number and save it, 
-        #otherwise through an error and save 0
-        @out = @ps.gets        
-        if ! @out.nil? && @out.match(/^\d.*/)
-          @sa = @out.split('.')
-          @job.qsub_id = @sa[0]
-          flash[:notice] = 'Your project was successfully created.'
-        else
-          @job.qsub_id = 0
-          flash[:notice] = 'Your project was successfully created but there may have been a problem submitting your job to the queue. Please contact your system administrator.'
-        end
-        @ps.close
-
-        #now submit auditor:
-
-        file2 = File.new("auditJob.sh", "w+", 0775)
-        file2.write("cd #{PROJECT_ROOT}/#{@pipeline_analysis.path}\n\n")
-        file2.write("sleep 60\n\n")
-        file2.write("wget -O audit.log #{AUDIT_URL}/#{@job.id}\n\n")
-        # now we zip it up
-        analysis = @pipeline_analysis
-        file2.write("cd ..\n\n")
-        file2.write("tar --gzip -pcvf archive_#{analysis.id}.tgz #{analysis.owner}_#{analysis.id}/\n\n")
-        file2.write("mv archive_#{analysis.id}.tgz #{ARCHIVE_ROOT}\n\n")
-        file2.close
-        @ps2 = IO.popen("#{QSUB_PREFIX} #{QSUB_CONCUR}#{PBS_SERVER} -l nodes=1:ppn=2 -j oe -m be #{@mail_to} -W depend=afterany:#{@job.qsub_id}#{QSUB_JOB_SUFFIX} auditJob.sh", "r+")
-        @ps2.close
-
-
-        @job.save
-        
-        
-      end
-      
-      redirect_to :controller => 'project', :action => 'list'
-      
-      #####
    
-      
-      
-    else
-      
-      @combion_filter.destroy if @combion_filter
-      @extract_dta.destroy if @extract_dta
-      @analysis_setting.destroy if @analysis_setting
-      @job.destroy
-      @pipeline_analysis.destroy
-      render :action => 'new_sequest', :id => @pipeline_project_id and return
-    end
-    
-    
-  end
+   @sequest_search.job = @job 
+   
+   if @sequest_search.save
+     
+     @files = []
+     
+     if ! @rawfiles.empty?
+       @job.runscript = ScriptGen.runscript(@job, nil, @rawfiles) 
+     else
+       @job.runscript = ScriptGen.runscript(@job, nil, nil) 
+     end
+     
+     
+     @job.save
+     #create the directory
+     File.umask(0000)
+     Dir.mkdir("#{QINTERACT_PROJECT_ROOT}/#{@pipeline_analysis.path}", 0777)
+     Dir.chdir("#{QINTERACT_PROJECT_ROOT}/#{@pipeline_analysis.path}") do
+       #write runscript
+       @file = File.new("runPipeline.sh", "w+", 0775)
+       @file.write(@job.runscript)
+       @file.close
+       #submit runscript
+       @mail_to = ''
+       @mail_to = "-M #{@job.notify_email}" unless @job.notify_email.index('@').nil?
+       if params[:SeparateAnalyses]
+         @job.qsub_cmd = "#{QSUB_PREFIX} #{QSUB_BATCH}#{PBS_SERVER} -l nodes=1:ppn=2:seq -j oe -m be #{@mail_to} runPipeline.sh"  
+       else
+         @job.qsub_cmd = "#{QSUB_PREFIX} #{QSUB_BATCH}#{PBS_SERVER} -l nodes=1:ppn=2:seq -j oe -m be #{@mail_to} runPipeline.sh"  
+       end
+       #puts @job.qsub_cmd
+       @ps = IO.popen(@job.qsub_cmd, "r+")
+       
+       #try to get qsub number and save it, 
+       #otherwise through an error and save 0
+       @out = @ps.gets        
+       if ! @out.nil? && @out.match(/^\d.*/)
+         @sa = @out.split('.')
+         @job.qsub_id = @sa[0]
+         flash[:notice] = 'Your project was successfully created.'
+       else
+         @job.qsub_id = 0
+         flash[:notice] = 'Your project was successfully created but there may have been a problem submitting your job to the queue. Please contact your system administrator.'
+       end
+       @ps.close
+       
+       #now submit auditor:
+     
+       file2 = File.new("auditJob.sh", "w+", 0775)
+       file2.write("cd #{PROJECT_ROOT}/#{@pipeline_analysis.path}\n\n")
+       file2.write("sleep 60\n\n")
+       file2.write("wget -O audit.log #{AUDIT_URL}/#{@job.id}\n\n")
+       # now we zip it up
+       analysis = @pipeline_analysis
+       file2.write("cd ..\n\n")
+       file2.write("tar --gzip -pcvf archive_#{analysis.id}.tgz #{analysis.owner}_#{analysis.id}/\n\n")
+       file2.write("mv archive_#{analysis.id}.tgz #{ARCHIVE_ROOT}\n\n")
+       file2.close
+       @ps2 = IO.popen("#{QSUB_PREFIX} #{QSUB_CONCUR}#{PBS_SERVER} -l nodes=1:ppn=2 -j oe -m be #{@mail_to} -W depend=afterany:#{@job.qsub_id}#{QSUB_JOB_SUFFIX} auditJob.sh", "r+")
+       @ps2.close
+       
+       
+       @job.save
+       
+       
+     end
+     
+     redirect_to :controller => 'project', :action => 'list'
+     
+     #####
+     
+   else
+     
+     
+     @combion_filter.destroy if @combion_filter
+     @extract_dta.destroy if @extract_dta
+     @analysis_setting.destroy if @analysis_setting
+     @job.destroy
+     @pipeline_analysis.destroy
+     render :action => 'new_sequest', :id => @pipeline_project_id and return
+   end
+   
 
-  def new_mascot
+ end
+ 
+ def new_mascot
     @dataset_type = 'Mascot'
     @pipeline_project = PipelineProject.find(params[:id])
     @import_job = Job.findByPBS(params[:qsubid].to_i) if ! params[:qsubid].nil?
@@ -680,7 +679,7 @@ class AnalysisController < ApplicationController
       else
         @job.runscript = ScriptGen.runscript(@job, nil, nil) 
       end
-  
+      
       @job.save
       #create the directory
       File.umask(0000)
@@ -713,9 +712,9 @@ class AnalysisController < ApplicationController
           flash[:notice] = 'Your project was successfully created but there may have been a problem submitting your job to the queue. Please contact your system administrator.'
         end
         @ps.close
-
+        
         #now submit auditor:
-
+        
         file2 = File.new("auditJob.sh", "w+", 0775)
         file2.write("cd #{PROJECT_ROOT}/#{@pipeline_analysis.path}\n\n")
         file2.write("sleep 60\n\n")
@@ -728,8 +727,8 @@ class AnalysisController < ApplicationController
         file2.close
         @ps2 = IO.popen("#{QSUB_PREFIX} #{QSUB_CONCUR}#{PBS_SERVER} -l nodes=1:ppn=2 -j oe -m be #{@mail_to} -W depend=afterany:#{@job.qsub_id}#{QSUB_JOB_SUFFIX} auditJob.sh", "r+")
         @ps2.close
-
-
+        
+        
         @job.save
         
         
@@ -751,7 +750,7 @@ class AnalysisController < ApplicationController
     
 
   end
-
+  
 
 
 
