@@ -19,4 +19,7 @@ config.action_view.cache_template_loading            = true
 # config.action_mailer.raise_delivery_errors = false
 
 #active resource lims site
-ILIMS_SITE = 'http://admin:admin@localhost/ilims'
+ILIMS_SITE = 'http://admin:admin@bioinf.itmat.upenn.int/ilims'
+
+# wget command to download from ilims
+WGET_CMD = 'wget --no-check '

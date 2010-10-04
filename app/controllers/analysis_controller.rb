@@ -318,7 +318,7 @@ class AnalysisController < ApplicationController
     #if this is a lims project, then we need to create our own raw directory.     @rawfiles = []
     if params[:LIMS] == '1'
       
-      @sequest_search.raw_dir = ""
+      @sequest_search.raw_dir = "LIMS_TRANSFER/#{session[:cas_user]}/#{Time.now.strftime("%Y%m%d%H%M%S")}"
       
       if @rawfiles.nil? || @rawfiles.empty?
         @pipeline_analysis.destroy
@@ -372,8 +372,6 @@ class AnalysisController < ApplicationController
       @job.mscluster = @mscluster
       
     end
-
-      
 
 
     @original_name = @pipeline_analysis.name
@@ -590,7 +588,7 @@ class AnalysisController < ApplicationController
     @rawfiles = []
     #if this is a lims project, then we need to create our own raw directory.     @rawfiles = []
     if params[:LIMS] == '1'
-      @mascot_search.raw_dir = ""
+      @mascot_search.raw_dir = "LIMS_TRANSFER/#{session[:cas_user]}/#{Time.now.strftime("%Y%m%d%H%M%S")}"
       if @rawfiles.empty?
         @pipeline_analysis.destroy
         flash[:notice] = "You have to select at least one raw file or pick a raw folder."

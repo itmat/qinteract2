@@ -22,11 +22,16 @@ class ScriptGen
       #first make the raw directory
       runscript += "#{SEQUEST_SSH_PREFIX} mkdir -p #{SEQUEST_RESULTS}/#{job.sequest_search.raw_dir}\n\n" if job.sequest_search
       runscript += "#{SEQUEST_SSH_PREFIX} mkdir -p #{SEQUEST_RESULTS}/#{job.mascot_search.raw_dir}\n\n" if job.mascot_search
+      runscript += "mkdir /tmp/LIMS_TRANSFER"
       
       for i in 0...limsfiles.size
         
-        runscript += "scp #{limsfiles[i]} #{SEQUEST_LOGIN}:#{SEQUEST_RESULTS}/#{job.sequest_search.raw_dir}/\n\n" if job.sequest_search
-        runscript += "scp #{limsfiles[i]} #{SEQUEST_LOGIN}:#{SEQUEST_RESULTS}/#{job.mascot_search.raw_dir}/\n\n" if job.mascot_search
+        # now get each file locally and then put it on the server
+        
+        runscript += "#{WGET_CMD} -O /tmp/LIMS_TRANSFER/#{limsfiles[i].attachment_file_name} '#{ILIMS_SITE}/items/#{item.id}/download.xml'"
+            
+        runscript += "scp /tmp/LIMS_TRANSFER/#{limsfiles[i].attachment_file_name} #{SEQUEST_LOGIN}:#{SEQUEST_RESULTS}/#{job.sequest_search.raw_dir}/\n\n" if job.sequest_search
+        runscript += "scp /tmp/LIMS_TRANSFER/#{limsfiles[i].attachment_file_name} #{SEQUEST_LOGIN}:#{SEQUEST_RESULTS}/#{job.mascot_search.raw_dir}/\n\n" if job.mascot_search
       
         
       end

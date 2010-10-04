@@ -19,3 +19,6 @@ config.action_mailer.raise_delivery_errors = false
 
 #active resource lims site
 ILIMS_SITE = 'http://admin:admin@localhost:3002'
+
+# wget command to download from ilims
+WGET_CMD = 'wget --no-check '
